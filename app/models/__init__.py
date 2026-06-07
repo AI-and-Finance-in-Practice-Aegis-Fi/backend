@@ -1,4 +1,5 @@
 from app.models.approval_log import ApprovalLog
+from app.models.audit_log import AuditLog
 from app.models.base import Base, TimestampMixin
 from app.models.department import Department
 from app.models.employee import Employee
@@ -18,4 +19,5 @@ __all__ = [
     "Transaction",
     "AIPaymentPolicy",
     "ApprovalLog",
+    "AuditLog",
 ]
