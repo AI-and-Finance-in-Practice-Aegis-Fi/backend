@@ -10,6 +10,8 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# TODO: 배포 후 실제 Vercel URL로 교체 필요
+# 예: https://aegis-fi.vercel.app
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
