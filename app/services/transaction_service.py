@@ -80,6 +80,7 @@ async def request_transaction(
 
 async def list_transactions(
     db: AsyncSession,
+    employee_id: int | None = None,
     department_id: int | None = None,
     is_approved: bool | None = None,
     start_date: date | None = None,
@@ -97,6 +98,8 @@ async def list_transactions(
         .order_by(Transaction.payment_time.desc())
     )
 
+    if employee_id is not None:
+        stmt = stmt.where(Transaction.employee_id == employee_id)
     if department_id is not None:
         stmt = stmt.where(Department.department_id == department_id)
     if is_approved is not None:

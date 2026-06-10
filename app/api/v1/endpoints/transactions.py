@@ -29,6 +29,7 @@ async def request_transaction(
 
 @router.get("", response_model=list[TransactionListItem])
 async def list_transactions(
+    employee_id: int | None = None,
     department_id: int | None = None,
     is_approved: bool | None = None,
     start_date: date | None = None,
@@ -37,6 +38,7 @@ async def list_transactions(
 ):
     return await transaction_service.list_transactions(
         db,
+        employee_id=employee_id,
         department_id=department_id,
         is_approved=is_approved,
         start_date=start_date,

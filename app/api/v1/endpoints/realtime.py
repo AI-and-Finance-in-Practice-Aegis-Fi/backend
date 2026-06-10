@@ -67,11 +67,14 @@ async def _transaction_stream():
             for tx, emp_name, dept_name in rows:
                 payload = {
                     "transaction_id": tx.transaction_id,
+                    "employee_id": tx.employee_id,
+                    "employee_name": emp_name,
+                    "department_name": dept_name,
                     "merchant_name": tx.merchant_name,
                     "amount": float(tx.amount),
+                    "category": tx.category,
                     "is_approved": tx.is_approved,
-                    "department_name": dept_name,
-                    "employee_name": emp_name,
+                    "reason": tx.ai_risk_reason,
                     "payment_time": tx.payment_time.isoformat(),
                 }
                 yield _sse(payload, event="transaction")

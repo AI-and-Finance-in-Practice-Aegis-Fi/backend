@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     approvals,
     audit,
     dashboard,
+    employees,
     policies,
     realtime,
     recommendations,
@@ -15,6 +16,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(employees.router, prefix="/employees", tags=["employees"])
 api_router.include_router(saas.router, prefix="/saas", tags=["saas"])
 api_router.include_router(transactions.router, prefix="/transactions", tags=["transactions"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
