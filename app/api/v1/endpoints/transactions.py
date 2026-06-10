@@ -1,6 +1,7 @@
+import traceback
 from datetime import date
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -24,7 +25,13 @@ async def request_transaction(
     body: TransactionRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    return await transaction_service.request_transaction(db, body)
+    try:
+        return await transaction_service.request_transaction(db, body)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}",
+        )
 
 
 @router.get("", response_model=list[TransactionListItem])
