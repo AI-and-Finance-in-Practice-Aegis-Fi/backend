@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, not_, select
+from sqlalchemy import func, select
 
 from app.core.database import AsyncSessionLocal
 from app.models.approval_log import ApprovalLog
@@ -125,12 +125,10 @@ async def _dashboard_summary_stream():
                 )
                 blocked_count_today = int(res.scalar())
 
-                # Approved by policy but no human approval log yet
-                logged_ids = select(ApprovalLog.transaction_id)
+                # Exception approval requests not yet decided
                 res = await db.execute(
-                    select(func.count(Transaction.transaction_id)).where(
-                        Transaction.is_approved == True,  # noqa: E712
-                        not_(Transaction.transaction_id.in_(logged_ids)),
+                    select(func.count(ApprovalLog.approval_id)).where(
+                        ApprovalLog.approval_result.is_(None)
                     )
                 )
                 pending_approval_count = int(res.scalar())
