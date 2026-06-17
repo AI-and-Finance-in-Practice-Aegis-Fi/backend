@@ -2,6 +2,7 @@
 GPT-4o powered Korean-language report generation.
 Uses AsyncOpenAI client; API key and model read from settings.
 """
+from fastapi import HTTPException, status
 from openai import AsyncOpenAI
 
 from app.core.config import settings
@@ -96,13 +97,19 @@ Aegis-Fi를 도입한다면 SaaS낭비 비용을 줄이고, AI 기반의 통제 
 
 전문적이고 간결하게 작성하되, 근거 없는 수치나 과장된 표현은 사용하지 마세요."""
 
-    response = await _get_client().chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=600,
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = await _get_client().chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=600,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 리포트 생성에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        )
 
 
 async def generate_anomaly_explain_report(anomaly: AnomalyResult) -> str:
@@ -146,10 +153,16 @@ AI 기반의 통제 시스템을 갖추어 기업 지출 관리 체계를 고도
 
 전문적이고 간결하게 작성하되, 확인되지 않은 사실을 단정하지 마세요."""
 
-    response = await _get_client().chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=500,
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = await _get_client().chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=500,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 리포트 생성에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        )
