@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import func, not_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.approval_log import ApprovalLog
@@ -85,12 +85,10 @@ async def get_summary(db: AsyncSession) -> DashboardSummaryResponse:
     )
 
     # ── Pending approval count ────────────────────────────────────────────────
-    logged_ids = select(ApprovalLog.transaction_id)
     pending_approval_count = (
         await db.execute(
-            select(func.count(Transaction.transaction_id)).where(
-                Transaction.is_approved == True,  # noqa: E712
-                not_(Transaction.transaction_id.in_(logged_ids)),
+            select(func.count(ApprovalLog.approval_id)).where(
+                ApprovalLog.approval_result.is_(None)
             )
         )
     ).scalar()

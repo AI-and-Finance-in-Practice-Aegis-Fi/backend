@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,6 +8,8 @@ from sqlalchemy import text
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+
+logger = logging.getLogger(__name__)
 
 _SEQUENCES = [
     ('department',        'department_id'),
@@ -32,8 +35,8 @@ async def lifespan(app: FastAPI):
                     f"COALESCE((SELECT MAX({col}) FROM {table}), 1)"
                     f")"
                 ))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Sequence sync failed for %s.%s: %s", table, col, e)
         await db.commit()
     yield
 

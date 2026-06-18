@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -80,6 +81,11 @@ async def decide(
         tx = await db.get(Transaction, log.transaction_id)
         if tx is not None:
             tx.is_approved = True
+            employee = await db.get(Employee, tx.employee_id)
+            if employee is not None:
+                dept = await db.get(Department, employee.department_id)
+                if dept is not None:
+                    dept.current_spending = (dept.current_spending or Decimal(0)) + tx.amount
 
     event_type = "APPROVAL_GRANTED" if body.decision else "APPROVAL_REJECTED"
     await audit_service.record(
