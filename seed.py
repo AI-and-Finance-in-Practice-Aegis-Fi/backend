@@ -1,6 +1,6 @@
 """
 Seed script for Aegis-Fi database.
-Reads 1차_데이터셋.xlsx and inserts all data.
+Reads 2차_데이터셋.xlsx and inserts all data.
 
 Usage: python seed.py
 """
@@ -97,7 +97,7 @@ async def seed():
     print(f"Connecting to {dsn.split('@')[-1]} ...")
     conn = await asyncpg.connect(dsn=dsn)
 
-    wb = _load_workbook("1차_데이터셋.xlsx")
+    wb = _load_workbook("2차_데이터셋.xlsx")
 
     try:
         async with conn.transaction():
