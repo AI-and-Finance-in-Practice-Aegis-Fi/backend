@@ -70,6 +70,11 @@ def _to_datetime(val) -> datetime | None:
         return None
     if isinstance(val, datetime):
         return val
+    if isinstance(val, str):
+        try:
+            return datetime.fromisoformat(val)
+        except ValueError:
+            return None
     if isinstance(val, (int, float)):
         return _EXCEL_EPOCH + timedelta(days=float(val))
     return None
