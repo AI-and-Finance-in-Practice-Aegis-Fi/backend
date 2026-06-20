@@ -113,7 +113,7 @@ async def update_subscription(
 
 async def delete_subscription(db: AsyncSession, subscription_id: int) -> None:
     sub = await get_subscription(db, subscription_id)
-    await db.delete(sub)
+    db.delete(sub)
     await db.commit()
 
 
