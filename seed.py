@@ -100,7 +100,7 @@ async def seed():
     dsn = url.replace("postgresql+asyncpg://", "postgresql://")
 
     print(f"Connecting to {dsn.split('@')[-1]} ...")
-    conn = await asyncpg.connect(dsn=dsn)
+    conn = await asyncpg.connect(dsn=dsn, command_timeout=300)
 
     wb = _load_workbook("2차_데이터셋.xlsx")
 
@@ -118,7 +118,10 @@ async def seed():
                     INSERT INTO department
                         (department_id, department_name, monthly_budget_limit, current_spending)
                     VALUES ($1, $2, $3, $4)
-                    ON CONFLICT (department_id) DO NOTHING
+                    ON CONFLICT (department_id) DO UPDATE SET
+                        department_name     = EXCLUDED.department_name,
+                        monthly_budget_limit = EXCLUDED.monthly_budget_limit,
+                        current_spending    = EXCLUDED.current_spending
                     """,
                     _strip_id(r[0]), r[1], r[2], r[3],
                 )
@@ -135,7 +138,10 @@ async def seed():
                     INSERT INTO employee
                         (employee_id, employee_name, position, department_id)
                     VALUES ($1, $2, $3, $4)
-                    ON CONFLICT (employee_id) DO NOTHING
+                    ON CONFLICT (employee_id) DO UPDATE SET
+                        employee_name = EXCLUDED.employee_name,
+                        position      = EXCLUDED.position,
+                        department_id = EXCLUDED.department_id
                     """,
                     _strip_id(r[0]), r[1], r[4], _strip_id(r[2]),
                 )
@@ -156,7 +162,16 @@ async def seed():
                          monthly_fee, total_seats, used_seats,
                          wasted_amount, risk_level, renewal_date, department_id)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::risk_level_enum, $9, $10)
-                    ON CONFLICT (subscription_id) DO NOTHING
+                    ON CONFLICT (subscription_id) DO UPDATE SET
+                        subscription_name = EXCLUDED.subscription_name,
+                        provider          = EXCLUDED.provider,
+                        monthly_fee       = EXCLUDED.monthly_fee,
+                        total_seats       = EXCLUDED.total_seats,
+                        used_seats        = EXCLUDED.used_seats,
+                        wasted_amount     = EXCLUDED.wasted_amount,
+                        risk_level        = EXCLUDED.risk_level,
+                        renewal_date      = EXCLUDED.renewal_date,
+                        department_id     = EXCLUDED.department_id
                     """,
                     _strip_id(r[0]), r[3], r[4],
                     _to_int(r[5]), int(r[6]), int(r[7]),
@@ -177,7 +192,12 @@ async def seed():
                         (usage_id, employee_id, subscription_id,
                          last_login_date, monthly_usage_count, is_ghost_account)
                     VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (usage_id) DO NOTHING
+                    ON CONFLICT (usage_id) DO UPDATE SET
+                        employee_id         = EXCLUDED.employee_id,
+                        subscription_id     = EXCLUDED.subscription_id,
+                        last_login_date     = EXCLUDED.last_login_date,
+                        monthly_usage_count = EXCLUDED.monthly_usage_count,
+                        is_ghost_account    = EXCLUDED.is_ghost_account
                     """,
                     _strip_id(r[0]), _strip_id(r[1]), _strip_id(r[6]),
                     _to_date(r[8]), int(r[9]) if r[9] is not None else 0,
@@ -212,7 +232,16 @@ async def seed():
                          amount, user_input_reason, is_approved,
                          ai_risk_score, ai_risk_reason, payment_time)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    ON CONFLICT (transaction_id) DO NOTHING
+                    ON CONFLICT (transaction_id) DO UPDATE SET
+                        employee_id       = EXCLUDED.employee_id,
+                        merchant_name     = EXCLUDED.merchant_name,
+                        category          = EXCLUDED.category,
+                        amount            = EXCLUDED.amount,
+                        user_input_reason = EXCLUDED.user_input_reason,
+                        is_approved       = EXCLUDED.is_approved,
+                        ai_risk_score     = EXCLUDED.ai_risk_score,
+                        ai_risk_reason    = EXCLUDED.ai_risk_reason,
+                        payment_time      = EXCLUDED.payment_time
                     """,
                     _strip_id(r[0]), _strip_id(r[1]), r[5], r[6],
                     amount, r[8],
@@ -234,7 +263,11 @@ async def seed():
                         (policy_id, employee_id, department_id,
                          restricted_category, single_payment_limit, is_blocked)
                     VALUES ($1, NULL, $2, $3, $4, $5)
-                    ON CONFLICT (policy_id) DO NOTHING
+                    ON CONFLICT (policy_id) DO UPDATE SET
+                        department_id        = EXCLUDED.department_id,
+                        restricted_category  = EXCLUDED.restricted_category,
+                        single_payment_limit = EXCLUDED.single_payment_limit,
+                        is_blocked           = EXCLUDED.is_blocked
                     """,
                     _strip_id(r[0]), _strip_id(r[1]),
                     r[3], _to_int(r[4]),
@@ -254,7 +287,12 @@ async def seed():
                         (approval_id, transaction_id, approver_employee_id,
                          approval_result, approval_time, approval_reason)
                     VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (approval_id) DO NOTHING
+                    ON CONFLICT (approval_id) DO UPDATE SET
+                        transaction_id       = EXCLUDED.transaction_id,
+                        approver_employee_id = EXCLUDED.approver_employee_id,
+                        approval_result      = EXCLUDED.approval_result,
+                        approval_time        = EXCLUDED.approval_time,
+                        approval_reason      = EXCLUDED.approval_reason
                     """,
                     _strip_id(r[0]), _strip_id(r[1]), _strip_id(r[2]),
                     r[4] == "승인", _to_datetime(r[5]), r[6],
@@ -263,8 +301,22 @@ async def seed():
 
         print("\nSeed completed successfully.")
 
+        # ── Advance sequences so app-created records don't conflict ───────
+        print("\nResetting sequences...")
+        for table, col in [
+            ("transaction", "transaction_id"),
+            ("approval_log", "approval_id"),
+        ]:
+            max_id = await conn.fetchval(f"SELECT COALESCE(MAX({col}), 0) FROM {table}")
+            seq = await conn.fetchval(
+                "SELECT pg_get_serial_sequence($1, $2)", table, col
+            )
+            if seq:
+                await conn.execute(f"SELECT setval('{seq}', {max_id})")
+                print(f"  {seq} → {max_id}")
+
         # ── Row count verification ─────────────────────────────────────────
-        print("\nRow counts:")
+        print("\nFinal row counts:")
         for table in [
             "department", "employee", "saas_subscription",
             "saas_usage", "transaction", "ai_payment_policy", "approval_log",
