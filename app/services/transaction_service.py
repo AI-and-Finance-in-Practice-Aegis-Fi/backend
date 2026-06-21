@@ -17,6 +17,7 @@ from app.schemas.transaction import (
     TransactionRequest,
     TransactionRequestResponse,
 )
+from app.models.approval_log import ApprovalLog
 from app.services import audit_service, policy_engine
 
 
@@ -50,6 +51,17 @@ async def request_transaction(
         employee = await db.get(Employee, data.employee_id)
         dept = await db.get(Department, employee.department_id)
         dept.current_spending = (dept.current_spending or Decimal(0)) + data.amount
+
+    # ── 4. Auto-create pending ApprovalLog so finance team sees blocked tx ────
+    if not result.is_approved:
+        pending_log = ApprovalLog(
+            transaction_id=tx.transaction_id,
+            approver_employee_id=None,
+            approval_result=None,
+            approval_reason=result.reason,
+            approval_time=None,
+        )
+        db.add(pending_log)
 
     event_type = (
         "TRANSACTION_APPROVED" if result.is_approved else "TRANSACTION_BLOCKED"

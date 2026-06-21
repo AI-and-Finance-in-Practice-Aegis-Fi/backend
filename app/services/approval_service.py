@@ -36,6 +36,26 @@ async def request_exception(
             detail="Already approved transactions cannot request exception approval",
         )
 
+    # Reuse existing pending log if auto-created on block
+    existing = (
+        await db.execute(
+            select(ApprovalLog).where(
+                ApprovalLog.transaction_id == transaction_id,
+                ApprovalLog.approval_result.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.approval_reason = reason
+        await db.commit()
+        await db.refresh(existing)
+        return ApprovalRequestResponse(
+            approval_id=existing.approval_id,
+            transaction_id=transaction_id,
+            status="pending",
+        )
+
     log = ApprovalLog(
         transaction_id=transaction_id,
         approver_employee_id=None,

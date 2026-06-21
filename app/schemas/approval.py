@@ -19,7 +19,7 @@ class ApprovalRequestResponse(BaseModel):
 
 class ApprovalDecideBody(BaseModel):
     decision: bool
-    approver_employee_id: int
+    approver_employee_id: int | None = None
     reason: str
 
 
